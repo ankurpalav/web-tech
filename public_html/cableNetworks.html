@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+table,th,td{
+   border:1;
+   border-style:ridge;
+   cellspacing:0px;
+}
+</style>
+</head>
+<body>
+<script type="text/javascript">
+var xmlDoc;
+function getFileName()
+{           
+	var filename = document.forms["myform"]["filename"].value;
+	if(filename == "" || filename == null)
+	{
+		alert("Please enter a filename!!");
+	}
+	else if(filename.search(".xml") == -1)
+	{
+		alert("Invalid file!!");
+	}
+	else
+	{
+		loadFile(filename);
+		displayData();
+	}
+
+}
+function loadFile(filename)
+{
+
+	if (window.XMLHttpRequest)
+  	{	
+  		xmlhttp=new XMLHttpRequest();
+ 	}
+	else
+  	{
+  		xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+  	}	try{
+		xmlhttp.open("GET",filename,false);
+		xmlhttp.send();
+		
+		if(xmlhttp.status == "404")
+		{
+			alert("File doesn't exist!!");
+			return 0;
+		}		
+		xmlDoc=xmlhttp.responseXML;
+		}
+		catch(e)
+		{
+		alert("File doesn't exist!!");
+		return 0;
+		}
+	return xmlDoc;
+}
+function displayData()
+{
+
+		var data = xmlDoc.getElementsByTagName("Data");
+		var row = xmlDoc.getElementsByTagName("Row");
+		var workbook = xmlDoc.getElementsByTagName("Workbook");
+		var table = xmlDoc.getElementsByTagName("Table");
+		var header = xmlDoc.getElementsByTagName("Header");
+
+		if (xmlDoc.documentElement.nodeName=="parsererror")
+      		{
+			alert("Error in XML file");
+      			return(null);
+      		}
+		
+		if(row.length == 0)
+		{
+			alert("No company records exist!!");
+			return 0;
+		}
+		else
+		{
+			var myWindow = window.open("","_blank","toolbar=yes, scrollbars=yes, resizable=yes, top=1000, left=1000, width=1000, height=1000");
+			myWindow.document.write("<table border=\"1\"><tr>");
+			for (i=0;i<data.length;i++)
+  			{ 
+				var datalength = data[i].childNodes.length;
+				var d;
+				if ((datalength > 0) && (!(is_all_ws(data[i].childNodes[0]))))
+				d = data[i].childNodes[0].nodeValue;
+				else
+				d = "N/A";
+				
+  				myWindow.document.write("<th>");
+  				myWindow.document.write(d);
+  				myWindow.document.write("</th>");
+  			}
+			myWindow.document.write("</tr>");
+
+			for (i=0;i<row.length;i++)
+  			{ 
+				
+				var networklength = row[i].getElementsByTagName("Network")[0].childNodes.length;
+				var network;
+				
+				if ((networklength > 0) && (!(is_all_ws(row[i].getElementsByTagName("Network")[0].childNodes[0]))))
+				network = row[i].getElementsByTagName("Network")[0].childNodes[0].nodeValue;
+				
+				else
+				network = "N/A";
+				
+				
+				myWindow.document.write("<tr><td>");
+  				myWindow.document.write(network);
+  				myWindow.document.write("</td><td>");
+
+				var ownerlength = row[i].getElementsByTagName("Owner")[0].childNodes.length;
+				var owner;
+				
+				if ((ownerlength > 0) && (!(is_all_ws(row[i].getElementsByTagName("Owner")[0].childNodes[0]))))
+				owner = row[i].getElementsByTagName("Owner")[0].childNodes[0].nodeValue;
+				
+				else
+				owner = "N/A";
+
+
+  				myWindow.document.write(owner);
+  				myWindow.document.write("</td><td><ul>");
+
+  				var feed = row[i].getElementsByTagName("Feed");
+				for(j=0;j<feed.length;j++)
+  				{
+					var feedlength = feed[j].childNodes.length;
+					var f;
+					if((feedlength > 0) && (!(is_all_ws(feed[j].childNodes[0]))))
+					{
+					f = feed[j].childNodes[0].nodeValue;
+
+					myWindow.document.write("<li>");
+					myWindow.document.write(f);
+					myWindow.document.write("</li>");
+					}
+					else
+					{
+					f="";
+					myWindow.document.write(f);
+					}
+				}
+					myWindow.document.write("</ul></td><td>");
+
+
+					var noteslength = row[i].getElementsByTagName("Notes")[0].childNodes.length;
+
+ 					if ((noteslength > 0) && (!(is_all_ws(row[i].getElementsByTagName("Notes")[0].childNodes[0]))))
+					notes = row[i].getElementsByTagName("Notes")[0].childNodes[0].nodeValue;
+				
+					else
+					notes = "N/A";
+
+  					myWindow.document.write(notes);
+					myWindow.document.write("</td><td>");
+
+					var homepagelength = row[i].getElementsByTagName("HomePage")[0].childNodes.length;
+					var homepage;
+					if ((homepagelength > 0) && (!(is_all_ws(row[i].getElementsByTagName("HomePage")[0].childNodes[0]))))
+					{
+					homepage = row[i].getElementsByTagName("HomePage")[0].childNodes[0].nodeValue;
+					//var str = row[i].getElementsByTagName("HomePage")[0].childNodes[0].nodeValue; 
+					var anchorTag = '<a href="' + homepage + '">';
+  					myWindow.document.write(anchorTag);
+  					myWindow.document.write(homepage);
+  					myWindow.document.write("</a></td><td>");
+					}
+				
+					else
+					{
+					homepage = "N/A";
+					myWindow.document.write(homepage);
+  					myWindow.document.write("</td><td>");
+					}
+  					
+					
+					var logolength = row[i].getElementsByTagName("Logo")[0].childNodes.length;
+					var logo;
+ 					if ((logolength > 0) && (!(is_all_ws(row[i].getElementsByTagName("Logo")[0].childNodes[0]))))
+					{
+					logo = row[i].getElementsByTagName("Logo")[0].childNodes[0].nodeValue;
+					//var img = row[i].getElementsByTagName("Logo")[0].childNodes[0].nodeValue;
+					var imgTag = '<img src="' + logo + '">';
+  					//myWindow.document.write(row[i].getElementsByTagName("Logo")[0].childNodes[0].nodeValue);
+					myWindow.document.write(imgTag);
+  					myWindow.document.write("</td></tr>");
+					}
+				
+					else
+					{
+					logo = "N/A";
+					myWindow.document.write(logo);
+					myWindow.document.write("</td></tr>");
+					}
+
+					
+  			}
+					myWindow.document.write("</table>");
+			
+		}
+	
+	
+}
+function is_all_ws( nod )
+{
+  // Use ECMA-262 Edition 3 String and RegExp features
+  return !(/[^\t\n\r ]/.test(nod.textContent));
+}
+
+</script>
+<center>
+<form name="myform"onsubmit="return getFileName();"></br></br></br></br>
+<p>Enter URL for Company List XML File<p>
+<input type="text"name="filename"></br></br>
+<input type="submit" value="Submit Query">
+</form>
+</center>
+<noscript>
+</body>
+</html>

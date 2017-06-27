@@ -1,0 +1,3373 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+  <script src="//code.jquery.com/jquery-1.9.1.js"></script>
+  
+  <script src="//ajax.aspnetcdn.com/ajax/jquery.validate/1.9/jquery.validate.min.js"></script>
+  <script src="http://openlayers.org/api/OpenLayers.js"></script>
+  
+  <script src="moment.js"></script>
+  <script src="moment-timezone-with-data.js"></script>
+  <script src="moment-timezone.js"></script>
+  
+<style>
+body{
+	background-image:url("http://cs-server.usc.edu:45678/hw/hw8/images/bg.jpg");
+	background-attachment:fixed;
+	background-size:1500px;
+	
+}
+
+#tb3{
+	background-color:rgb(51,51,51);
+}
+
+#rod1,#rod2,#rod3,#rod4,#rod5,#rod6,#rod7{
+	border-radius: 6px;
+	padding:10px;
+}
+
+@media only screen and (max-width: 768px) {
+
+    #tb3 {
+        background-color:rgba(0,0,0,0.0);
+    }
+
+    #rod1,#rod2,#rod3,#rod4,#rod5,#rod6,#rod7{
+	border-radius: 35px;
+	padding:10px;
+    }
+}
+</style>
+<script>
+
+var icon="";
+var summary="";
+var temperature="";
+var symbol="";
+var city1="";
+var state1="";
+
+//facebook integration 
+window.fbAsyncInit = function() {
+    FB.init({
+      appId      : '416095151934957',
+      xfbml      : true,
+      version    : 'v2.4'
+    });
+
+  };
+
+  (function(d, s, id){
+     var js, fjs = d.getElementsByTagName(s)[0];
+     if (d.getElementById(id)) {return;}
+     js = d.createElement(s); js.id = id;
+     js.src = "//connect.facebook.net/en_US/sdk.js";
+     fjs.parentNode.insertBefore(js, fjs);
+   }(document, 'script', 'facebook-jssdk'));
+
+
+
+function myFacebookLogin() {
+  FB.login(function(response){
+	if(response.authResponse)
+	{		
+    		loadPost();
+	}
+ 	else
+	{
+		alert("Not Posted");
+	}
+
+
+}, {scope: 'publish_actions'});
+
+
+}
+function loadPost()
+{
+		var name='Weather in '+city1+', '+state1;
+		var description=''+summary+', '+temperature+''+symbol;
+	
+		FB.ui({
+                 method: 'feed',
+  		link: 'https://developers.facebook.com/docs/',
+  		caption: 'WEATHER INFORMATION FROM FORECAST.IO',
+		description:description,
+		name:name,
+		picture:icon
+        	}, 
+              		function(response)
+			{
+				
+				if(response && response.post_id){
+            				alert("Posted Sucessfully");
+            			}
+            			else
+              			{
+              				alert("Not Posted");
+              			}
+                  	});
+}
+// clear the inputs/results and make tab1 active
+ $(document).ready(function(){
+		
+	$('#display').hide();
+	
+	$('#clear').click(function(){
+
+					$('#display').hide();
+					$('#basicMap').hide();
+	
+					document.getElementById("street").value="";
+					document.getElementById("city").value="";
+					document.getElementById("state").value="";	
+					$("input[name=degree]").filter("[value=fahrenheit]").prop("checked",true);
+
+					document.getElementById("e1").innerHTML="";
+					document.getElementById("e2").innerHTML="";
+					document.getElementById("e3").innerHTML="";
+	 
+			});
+			$('#submit').click(function(){
+
+					$(".nav-pills > li.active").removeClass("active");  //make rest links inactive
+					$(".nav-pills >li:first-child").addClass("active"); //make first link active 
+		
+					//$(".tab-content > div").removeClass("tab-pane fade in active"); //make rest tab content inactive
+					$(".tab-content > div.tab-pane fade active").addClass("tab-pane fade");
+					 
+					
+  					$(".tab-content > div:first-child").addClass("tab-pane fade in active"); //make tab1 content active
+					
+				    	
+			});
+	
+
+});
+// validate method & ajax part
+$(function(){
+	
+		$("#myform").validate({
+
+			rules:
+			{
+			street:"required",
+   			city:"required",
+			state:{
+				required:true
+				}
+			},
+
+			messages:
+			{
+			street:"<span id='e1' style='color:#E00000;font-size:12px;float:left;'>*please enter a value for street</span>",
+			city:"<span id='e2' style='color:#E00000;font-size:12px;float:left;'>*please enter a value for city</span>",
+			state:{
+				required:"<span id='e3' style='color:#E00000;font-size:12px;float:left;'>*please enter a value for state<span style='color:red;'>"
+				}
+				
+			},
+			errorPlacement: function(error, element) {
+    			if (element.attr("name") == "street" )
+        			error.insertBefore("#error1");
+    			else if  (element.attr("name") == "city" )
+        			error.insertAfter("#error2");
+    			else
+        			error.insertAfter("#error3");
+			},
+
+			 submitHandler: function(form) 
+			{
+            
+				
+				
+			var street1=myform.street.value;
+			city1=myform.city.value;
+			state1=myform.state.value;
+			var degree1=myform.degree.value;
+
+		
+					$.ajax({
+						url: 'http://project11-env.elasticbeanstalk.com/',
+						data: { street:street1,
+							city:city1,
+							state:state1,
+							degree:degree1
+						},
+						type: 'GET',
+						datatype:'json',
+						success: function(result) {
+							var output=JSON.parse(result);
+							var img="";
+							var details="";
+							if(output!=undefined)
+							{
+								$('#display').show();
+								$('#basicMap').show();
+								icon=output.currently.icon;
+								summary=output.currently.summary;
+								temperature=Math.round(output.currently.temperature);
+								var temperaturemin=Math.round(output.daily.data[0].temperatureMin);
+								var temperaturemax=Math.round(output.daily.data[0].temperatureMax);
+								var precipIntensity=output.currently.precipIntensity;
+								var precipProbabilityValue=(output.currently.precipProbability)*100;
+								var humidityValue=Math.round((output.currently.humidity).toFixed(2)*100);
+								var precipProbability=""+precipProbabilityValue+"%";
+								var humidity=""+humidityValue+"%";
+								var windSpeed=output.currently.windSpeed;
+								var visibility=output.currently.visibility;
+								var dewPoint=output.currently.dewPoint;
+								var timezone=output.timezone;
+								var offset=output.offset;
+								var sunRise=output.daily.data[0].sunriseTime;
+								var sunSet=output.daily.data[0].sunsetTime;
+								var latitude=output.latitude;
+								var longitude=output.longitude;
+
+								
+
+								var sunrisenew = moment(sunRise*1000).tz(timezone).format('hh:mm A');
+								var sunsetnew = moment(sunSet*1000).tz(timezone).format('hh:mm A');
+								
+								
+								
+
+								symbol="";
+								var tempsymbol="";
+								if(degree1=="fahrenheit")
+								{	symbol+='&#8457;';
+									windSpeed+=' mph';
+									visibility+=' mi';
+									dewPoint+='&#8457;';
+									tempsymbol+='temp(&#8457;)';
+								}	
+								else
+								{
+									symbol+='&#8451;';
+									windSpeed+=' m/s';
+									visibility+=' km';
+									dewPoint+='&#8451;';
+									tempsymbol+='temp(&#8451;)';
+									
+								}
+								switch(icon)
+								{
+									case "clear-day":
+        									icon='http://cs-server.usc.edu:45678/hw/hw8/images/clear.png';
+        									break;
+    									case "clear-night":
+        									icon='http://cs-server.usc.edu:45678/hw/hw8/images/clear_night.png';
+        									break;
+    									case "rain":
+        									icon='http://cs-server.usc.edu:45678/hw/hw8/images/rain.png';
+        									break;
+    									case "snow":
+        									icon='http://cs-server.usc.edu:45678/hw/hw8/images/snow.png';
+        									break;
+    									case "sleet":
+        									icon='http://cs-server.usc.edu:45678/hw/hw8/images/sleet.png';
+        									break;
+    									case "wind":
+        									icon='http://cs-server.usc.edu:45678/hw/hw8/images/wind.png';
+        									break;
+    									case "fog":
+        									icon='http://cs-server.usc.edu:45678/hw/hw8/images/wind.png';
+        									break;
+    									case "cloudy":
+        									icon='http://cs-server.usc.edu:45678/hw/hw8/images/cloudy.png';
+        									break;
+    									case "partly-cloudy-day":
+        									icon='http://cs-server.usc.edu:45678/hw/hw8/images/cloud_day.png';
+        									break;
+    									case "partly-cloudy-night":
+        									icon='http://cs-server.usc.edu:45678/hw/hw8/images/cloud_night.png';
+        									break; 
+								}
+								img+='<img src="'+icon+'" align="center" alt="'+summary+'" title="'+summary+'" width="130px" height="130px"></img>';
+								document.getElementById("icon").innerHTML=img;
+								details+='<p style="color:white;font-family:times new roman;">'+summary+'  in '+city1+','+state1+'</p>&nbsp;&nbsp;<p style="font-size:54px;color:white;text-align:center;">'+temperature+'<sup style="font-size:30px">'+symbol+'</sup></p>';
+								details+='<p style="font-size:15px;text-align:center;">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue">&nbsp;&nbsp;&nbsp;&nbsp;L:'+temperaturemin+'&deg;</span>|<span style="color:green">H:'+temperaturemax+'&deg;</span>&nbsp;&nbsp;&nbsp;<a href="javascript:myFacebookLogin();"><img src="http://cs-server.usc.edu:45678/hw/hw8/images/fb_icon.png" height="40px" width="40px" style="float:right;"/></img></a></p>';
+								document.getElementById("summary").innerHTML=details;
+
+
+								function isBetween(x, lower, upper) {
+  									return lower <= x && x < upper;
+ 								}
+
+								if(isBetween(precipIntensity,0,0.002)) {
+  
+									precipIntensity="None";
+								} 
+								else if(isBetween(precipIntensity,0.002,0.017)) {
+
+  									precipIntensity="Very Light";
+								}
+								else if(isBetween(precipIntensity,0.017,0.1)) {
+
+  									precipIntensity="Light";
+								}
+								else if(isBetween(precipIntensity,0.1,0.4)) {
+
+  									precipIntensity="Moderate";
+								}
+								else
+								{
+									precipIntensity="Heavy";
+								}
+								document.getElementById("precipitation").innerHTML=precipIntensity;
+								document.getElementById("precipitationprob").innerHTML=precipProbability;
+								document.getElementById("wind").innerHTML=windSpeed;
+								document.getElementById("dew").innerHTML=dewPoint;
+								document.getElementById("humidity").innerHTML=humidity;
+								document.getElementById("visibility").innerHTML=visibility;
+								document.getElementById("sunrise").innerHTML=sunrisenew;
+								document.getElementById("sunset").innerHTML=sunsetnew;	
+								
+
+								
+							
+								
+								//tab 2
+
+
+								var time=[];
+								for(var i=0;i<24;i++)
+								{
+									
+									var t = (output.hourly.data[i].time)*1000;
+									time[i] = moment(t).tz(timezone).format('hh:mm A');
+									
+								}
+								
+								document.getElementById("time1").innerHTML=time[0];
+								document.getElementById("time2").innerHTML=time[1];
+								document.getElementById("time3").innerHTML=time[2];
+								document.getElementById("time4").innerHTML=time[3];	
+
+
+								document.getElementById("time5").innerHTML=time[4];
+								document.getElementById("time6").innerHTML=time[5];
+								document.getElementById("time7").innerHTML=time[6];
+								document.getElementById("time8").innerHTML=time[7];
+
+								document.getElementById("time9").innerHTML=time[8];
+								document.getElementById("time10").innerHTML=time[9];
+								document.getElementById("time11").innerHTML=time[10];
+								document.getElementById("time12").innerHTML=time[11];
+
+								document.getElementById("time13").innerHTML=time[12];
+								document.getElementById("time14").innerHTML=time[13];
+								document.getElementById("time15").innerHTML=time[14];
+								document.getElementById("time16").innerHTML=time[15];
+
+								document.getElementById("time17").innerHTML=time[16];
+								document.getElementById("time18").innerHTML=time[17];
+								document.getElementById("time19").innerHTML=time[18];
+								document.getElementById("time20").innerHTML=time[19];
+
+								document.getElementById("time21").innerHTML=time[20];
+								document.getElementById("time22").innerHTML=time[21];
+								document.getElementById("time23").innerHTML=time[22];
+								document.getElementById("time24").innerHTML=time[23];
+
+
+
+
+								var iconimg=[];
+								
+								for(var i=0;i<24;i++)
+								{
+									iconimg[i] = output.hourly.data[i].icon;
+									switch(iconimg[i])
+								{
+									case "clear-day":
+        									iconimg[i]='http://cs-server.usc.edu:45678/hw/hw8/images/clear.png';
+        									break;
+    									case "clear-night":
+        									iconimg[i]='http://cs-server.usc.edu:45678/hw/hw8/images/clear_night.png';
+        									break;
+    									case "rain":
+        									iconimg[i]='http://cs-server.usc.edu:45678/hw/hw8/images/rain.png';
+        									break;
+    									case "snow":
+        									iconimg[i]='http://cs-server.usc.edu:45678/hw/hw8/images/snow.png';
+        									break;
+    									case "sleet":
+        									iconimg[i]='http://cs-server.usc.edu:45678/hw/hw8/images/sleet.png';
+        									break;
+    									case "wind":
+        									iconimg[i]='http://cs-server.usc.edu:45678/hw/hw8/images/wind.png';
+        									break;
+    									case "fog":
+        									iconimg[i]='http://cs-server.usc.edu:45678/hw/hw8/images/wind.png';
+        									break;
+    									case "cloudy":
+        									iconimg[i]='http://cs-server.usc.edu:45678/hw/hw8/images/cloudy.png';
+        									break;
+    									case "partly-cloudy-day":
+        									iconimg[i]='http://cs-server.usc.edu:45678/hw/hw8/images/cloud_day.png';
+        									break;
+    									case "partly-cloudy-night":
+        									iconimg[i]='http://cs-server.usc.edu:45678/hw/hw8/images/cloud_night.png';
+        									break; 
+								}
+								
+
+								}
+								document.getElementById("summary1").innerHTML='<img src="'+iconimg[0]+'"style="width:50px;height:50px;" title="'+output.hourly.data[0].summary+'"></img>';
+								document.getElementById("summary2").innerHTML='<img src="'+iconimg[1]+'"style="width:50px;height:50px;" title="'+output.hourly.data[1].summary+'"></img>';
+								document.getElementById("summary3").innerHTML='<img src="'+iconimg[2]+'"style="width:50px;height:50px;" title="'+output.hourly.data[2].summary+'"></img>';
+								document.getElementById("summary4").innerHTML='<img src="'+iconimg[3]+'"style="width:50px;height:50px;" title="'+output.hourly.data[3].summary+'"></img>';	
+
+
+								document.getElementById("summary5").innerHTML='<img src="'+iconimg[4]+'"style="width:50px;height:50px;" title="'+output.hourly.data[4].summary+'"></img>';
+								document.getElementById("summary6").innerHTML='<img src="'+iconimg[5]+'"style="width:50px;height:50px;" title="'+output.hourly.data[5].summary+'"></img>';
+								document.getElementById("summary7").innerHTML='<img src="'+iconimg[6]+'"style="width:50px;height:50px;" title="'+output.hourly.data[6].summary+'"></img>';
+								document.getElementById("summary8").innerHTML='<img src="'+iconimg[7]+'"style="width:50px;height:50px;" title="'+output.hourly.data[7].summary+'"></img>';
+
+								document.getElementById("summary9").innerHTML='<img src="'+iconimg[8]+'"style="width:50px;height:50px;" title="'+output.hourly.data[8].summary+'"></img>';
+								document.getElementById("summary10").innerHTML='<img src="'+iconimg[9]+'"style="width:50px;height:50px;" title="'+output.hourly.data[9].summary+'"></img>';
+								document.getElementById("summary11").innerHTML='<img src="'+iconimg[10]+'"style="width:50px;height:50px;" title="'+output.hourly.data[10].summary+'"></img>';
+								document.getElementById("summary12").innerHTML='<img src="'+iconimg[11]+'"style="width:50px;height:50px;" title="'+output.hourly.data[11].summary+'"></img>';
+
+								document.getElementById("summary13").innerHTML='<img src="'+iconimg[12]+'"style="width:50px;height:50px;" title="'+output.hourly.data[12].summary+'"></img>';
+								document.getElementById("summary14").innerHTML='<img src="'+iconimg[13]+'"style="width:50px;height:50px;" title="'+output.hourly.data[13].summary+'"></img>';
+								document.getElementById("summary15").innerHTML='<img src="'+iconimg[14]+'"style="width:50px;height:50px;" title="'+output.hourly.data[14].summary+'"></img>';
+								document.getElementById("summary16").innerHTML='<img src="'+iconimg[15]+'"style="width:50px;height:50px;" title="'+output.hourly.data[15].summary+'"></img>';
+
+								document.getElementById("summary17").innerHTML='<img src="'+iconimg[16]+'"style="width:50px;height:50px;" title="'+output.hourly.data[16].summary+'"></img>';
+								document.getElementById("summary18").innerHTML='<img src="'+iconimg[17]+'"style="width:50px;height:50px;" title="'+output.hourly.data[17].summary+'"></img>';
+								document.getElementById("summary19").innerHTML='<img src="'+iconimg[18]+'"style="width:50px;height:50px;" title="'+output.hourly.data[18].summary+'"></img>';
+								document.getElementById("summary20").innerHTML='<img src="'+iconimg[19]+'"style="width:50px;height:50px;" title="'+output.hourly.data[19].summary+'"></img>';
+
+								document.getElementById("summary21").innerHTML='<img src="'+iconimg[20]+'"style="width:50px;height:50px;" title="'+output.hourly.data[20].summary+'"></img>';
+								document.getElementById("summary22").innerHTML='<img src="'+iconimg[21]+'"style="width:50px;height:50px;" title="'+output.hourly.data[21].summary+'"></img>';
+								document.getElementById("summary23").innerHTML='<img src="'+iconimg[22]+'"style="width:50px;height:50px;" title="'+output.hourly.data[22].summary+'"></img>';
+								document.getElementById("summary24").innerHTML='<img src="'+iconimg[23]+'"style="width:50px;height:50px;" title="'+output.hourly.data[23].summary+'"></img>';
+
+								var temp=[];
+								for(var i=0;i<24;i++)
+								{
+									
+									temp[i] = output.hourly.data[i].temperature;
+									
+								}
+								
+								document.getElementById("tempsymbol").innerHTML=tempsymbol;	
+								
+								document.getElementById("temp1").innerHTML=temp[0];
+								document.getElementById("temp2").innerHTML=temp[1];
+								document.getElementById("temp3").innerHTML=temp[2];
+								document.getElementById("temp4").innerHTML=temp[3];	
+
+
+								document.getElementById("temp5").innerHTML=temp[4];
+								document.getElementById("temp6").innerHTML=temp[5];
+								document.getElementById("temp7").innerHTML=temp[6];
+								document.getElementById("temp8").innerHTML=temp[7];
+
+								document.getElementById("temp9").innerHTML=temp[8];
+								document.getElementById("temp10").innerHTML=temp[9];
+								document.getElementById("temp11").innerHTML=temp[10];
+								document.getElementById("temp12").innerHTML=temp[11];
+
+								document.getElementById("temp13").innerHTML=temp[12];
+								document.getElementById("temp14").innerHTML=temp[13];
+								document.getElementById("temp15").innerHTML=temp[14];
+								document.getElementById("temp16").innerHTML=temp[15];
+
+								document.getElementById("temp17").innerHTML=temp[16];
+								document.getElementById("temp18").innerHTML=temp[17];
+								document.getElementById("temp19").innerHTML=temp[18];
+								document.getElementById("temp20").innerHTML=temp[19];
+
+								document.getElementById("temp21").innerHTML=temp[20];
+								document.getElementById("temp22").innerHTML=temp[21];
+								document.getElementById("temp23").innerHTML=temp[22];
+								document.getElementById("temp24").innerHTML=temp[23];				
+
+								
+								var cloud=[];
+								for(var i=0;i<24;i++)
+								{
+									
+									var c = (output.hourly.data[i].cloudCover).toFixed(1);
+									c=c*100;
+									cloud[i]=c+"%";
+									
+								}
+
+								document.getElementById("cloud1").innerHTML=cloud[0];
+								document.getElementById("cloud2").innerHTML=cloud[1];
+								document.getElementById("cloud3").innerHTML=cloud[2];
+								document.getElementById("cloud4").innerHTML=cloud[3];	
+
+
+								document.getElementById("cloud5").innerHTML=cloud[4];
+								document.getElementById("cloud6").innerHTML=cloud[5];
+								document.getElementById("cloud7").innerHTML=cloud[6];
+								document.getElementById("cloud8").innerHTML=cloud[7];
+
+								document.getElementById("cloud9").innerHTML=cloud[8];
+								document.getElementById("cloud10").innerHTML=cloud[9];
+								document.getElementById("cloud11").innerHTML=cloud[10];
+								document.getElementById("cloud12").innerHTML=cloud[11];
+
+								document.getElementById("cloud13").innerHTML=cloud[12];
+								document.getElementById("cloud14").innerHTML=cloud[13];
+								document.getElementById("cloud15").innerHTML=cloud[14];
+								document.getElementById("cloud16").innerHTML=cloud[15];
+
+								document.getElementById("cloud17").innerHTML=cloud[16];
+								document.getElementById("cloud18").innerHTML=cloud[17];
+								document.getElementById("cloud19").innerHTML=cloud[18];
+								document.getElementById("cloud20").innerHTML=cloud[19];
+
+								document.getElementById("cloud21").innerHTML=cloud[20];
+								document.getElementById("cloud22").innerHTML=cloud[21];
+								document.getElementById("cloud23").innerHTML=cloud[22];
+								document.getElementById("cloud24").innerHTML=cloud[23];
+
+
+
+								//collapse part
+								var windcollapse=[];
+								for(var i=0;i<24;i++)
+								{
+									if(degree1 == "fahrenheit")
+									
+									windcollapse[i] = (output.hourly.data[i].windSpeed)+"mph";
+									else
+									windcollapse[i] = (output.hourly.data[i].windSpeed)+"m/s";
+									
+								}
+								document.getElementById("wc1").innerHTML=windcollapse[0];
+								document.getElementById("wc2").innerHTML=windcollapse[1];
+								document.getElementById("wc3").innerHTML=windcollapse[2];
+								document.getElementById("wc4").innerHTML=windcollapse[3];
+								document.getElementById("wc5").innerHTML=windcollapse[4];
+								document.getElementById("wc6").innerHTML=windcollapse[5];
+								document.getElementById("wc7").innerHTML=windcollapse[6];
+								document.getElementById("wc8").innerHTML=windcollapse[7];
+								document.getElementById("wc9").innerHTML=windcollapse[8];
+								document.getElementById("wc10").innerHTML=windcollapse[9];
+								document.getElementById("wc11").innerHTML=windcollapse[10];
+								document.getElementById("wc12").innerHTML=windcollapse[11];
+								document.getElementById("wc13").innerHTML=windcollapse[12];
+								document.getElementById("wc14").innerHTML=windcollapse[13];
+								document.getElementById("wc15").innerHTML=windcollapse[14];
+								document.getElementById("wc16").innerHTML=windcollapse[15];
+								document.getElementById("wc17").innerHTML=windcollapse[16];
+								document.getElementById("wc18").innerHTML=windcollapse[17];
+								document.getElementById("wc19").innerHTML=windcollapse[18];
+								document.getElementById("wc20").innerHTML=windcollapse[19];
+								document.getElementById("wc21").innerHTML=windcollapse[20];
+								document.getElementById("wc22").innerHTML=windcollapse[21];
+								document.getElementById("wc23").innerHTML=windcollapse[22];
+								document.getElementById("wc24").innerHTML=windcollapse[23];
+							
+							
+
+
+								var humiditycollapse=[];
+								for(var i=0;i<24;i++)
+								{
+									
+									var hc = (output.hourly.data[i].humidity).toFixed(2);
+									hc = Math.round(hc*100);
+									
+								 	humiditycollapse[i] = hc+"%";
+									
+								}
+								document.getElementById("hc1").innerHTML=humiditycollapse[0];
+								document.getElementById("hc2").innerHTML=humiditycollapse[1];
+								document.getElementById("hc3").innerHTML=humiditycollapse[2];
+								document.getElementById("hc4").innerHTML=humiditycollapse[3];
+								document.getElementById("hc5").innerHTML=humiditycollapse[4];
+								document.getElementById("hc6").innerHTML=humiditycollapse[5];
+								document.getElementById("hc7").innerHTML=humiditycollapse[6];
+								document.getElementById("hc8").innerHTML=humiditycollapse[7];
+								document.getElementById("hc9").innerHTML=humiditycollapse[8];
+								document.getElementById("hc10").innerHTML=humiditycollapse[9];
+								document.getElementById("hc11").innerHTML=humiditycollapse[10];
+								document.getElementById("hc12").innerHTML=humiditycollapse[11];
+								document.getElementById("hc13").innerHTML=humiditycollapse[12];
+								document.getElementById("hc14").innerHTML=humiditycollapse[13];
+								document.getElementById("hc15").innerHTML=humiditycollapse[14];
+								document.getElementById("hc16").innerHTML=humiditycollapse[15];
+								document.getElementById("hc17").innerHTML=humiditycollapse[16];
+								document.getElementById("hc18").innerHTML=humiditycollapse[17];
+								document.getElementById("hc19").innerHTML=humiditycollapse[18];
+								document.getElementById("hc20").innerHTML=humiditycollapse[19];
+								document.getElementById("hc21").innerHTML=humiditycollapse[20];
+								document.getElementById("hc22").innerHTML=humiditycollapse[21];
+								document.getElementById("hc23").innerHTML=humiditycollapse[22];
+								document.getElementById("hc24").innerHTML=humiditycollapse[23];
+
+	
+								var visibilitycollapse=[];
+								for(var i=0;i<24;i++)
+								{
+									if(degree1 == "fahrenheit")
+									visibilitycollapse[i] = (output.hourly.data[i].visibility)+"mi";
+									else
+									visibilitycollapse[i] = (output.hourly.data[i].visibility)+"km";
+									
+								}
+								document.getElementById("vc1").innerHTML=visibilitycollapse[0];
+								document.getElementById("vc2").innerHTML=visibilitycollapse[1];
+								document.getElementById("vc3").innerHTML=visibilitycollapse[2];
+								document.getElementById("vc4").innerHTML=visibilitycollapse[3];
+								document.getElementById("vc5").innerHTML=visibilitycollapse[4];
+								document.getElementById("vc6").innerHTML=visibilitycollapse[5];
+								document.getElementById("vc7").innerHTML=visibilitycollapse[6];
+								document.getElementById("vc8").innerHTML=visibilitycollapse[7];
+								document.getElementById("vc9").innerHTML=visibilitycollapse[8];
+								document.getElementById("vc10").innerHTML=visibilitycollapse[9];
+								document.getElementById("vc11").innerHTML=visibilitycollapse[10];
+								document.getElementById("vc12").innerHTML=visibilitycollapse[11];
+								document.getElementById("vc13").innerHTML=visibilitycollapse[12];
+								document.getElementById("vc14").innerHTML=visibilitycollapse[13];
+								document.getElementById("vc15").innerHTML=visibilitycollapse[14];
+								document.getElementById("vc16").innerHTML=visibilitycollapse[15];
+								document.getElementById("vc17").innerHTML=visibilitycollapse[16];
+								document.getElementById("vc18").innerHTML=visibilitycollapse[17];
+								document.getElementById("vc19").innerHTML=visibilitycollapse[18];
+								document.getElementById("vc20").innerHTML=visibilitycollapse[19];
+								document.getElementById("vc21").innerHTML=visibilitycollapse[20];
+								document.getElementById("vc22").innerHTML=visibilitycollapse[21];
+								document.getElementById("vc23").innerHTML=visibilitycollapse[22];
+								document.getElementById("vc24").innerHTML=visibilitycollapse[23];
+
+								var pressurecollapse=[];
+								for(var i=0;i<24;i++)
+								{
+									
+									if(degree1 == "fahrenheit")
+									pressurecollapse[i] = (output.hourly.data[i].pressure)+"mb";
+									else
+									pressurecollapse[i] = (output.hourly.data[i].pressure)+"hPa";
+									
+								}
+								document.getElementById("pc1").innerHTML=pressurecollapse[0];
+								document.getElementById("pc2").innerHTML=pressurecollapse[1];
+								document.getElementById("pc3").innerHTML=pressurecollapse[2];
+								document.getElementById("pc4").innerHTML=pressurecollapse[3];
+								document.getElementById("pc5").innerHTML=pressurecollapse[4];
+								document.getElementById("pc6").innerHTML=pressurecollapse[5];
+								document.getElementById("pc7").innerHTML=pressurecollapse[6];
+								document.getElementById("pc8").innerHTML=pressurecollapse[7];
+								document.getElementById("pc9").innerHTML=pressurecollapse[8];
+								document.getElementById("pc10").innerHTML=pressurecollapse[9];
+								document.getElementById("pc11").innerHTML=pressurecollapse[10];
+								document.getElementById("pc12").innerHTML=pressurecollapse[11];
+								document.getElementById("pc13").innerHTML=pressurecollapse[12];
+								document.getElementById("pc14").innerHTML=pressurecollapse[13];
+								document.getElementById("pc15").innerHTML=pressurecollapse[14];
+								document.getElementById("pc16").innerHTML=pressurecollapse[15];
+								document.getElementById("pc17").innerHTML=pressurecollapse[16];
+								document.getElementById("pc18").innerHTML=pressurecollapse[17];
+								document.getElementById("pc19").innerHTML=pressurecollapse[18];
+								document.getElementById("pc20").innerHTML=pressurecollapse[19];
+								document.getElementById("pc21").innerHTML=pressurecollapse[20];
+								document.getElementById("pc22").innerHTML=pressurecollapse[21];
+								document.getElementById("pc23").innerHTML=pressurecollapse[22];
+								document.getElementById("pc24").innerHTML=pressurecollapse[23];						
+		
+
+
+								//data for tab3
+								var day=[];
+							
+								for(var i=1;i<8;i++)
+								{
+									
+									day[i] = moment((output.daily.data[i].time)*1000).tz(timezone).format('dddd');
+								
+									
+								}
+								
+								document.getElementById("day11").innerHTML=day[1];
+								document.getElementById("day22").innerHTML=day[2];
+								document.getElementById("day33").innerHTML=day[3];
+								document.getElementById("day44").innerHTML=day[4];
+								document.getElementById("day55").innerHTML=day[5];
+								document.getElementById("day66").innerHTML=day[6];
+								document.getElementById("day77").innerHTML=day[7];
+
+								
+								var month=[];
+
+								for(var i=1;i<8;i++)
+								{
+									
+									month[i] = moment((output.daily.data[i].time)*1000).tz(timezone).format('MMM DD');
+									
+								}
+								
+								document.getElementById("month1").innerHTML=month[1];
+								document.getElementById("month2").innerHTML=month[2];
+								document.getElementById("month3").innerHTML=month[3];
+								document.getElementById("month4").innerHTML=month[4];
+								document.getElementById("month5").innerHTML=month[5];
+								document.getElementById("month6").innerHTML=month[6];
+								document.getElementById("month7").innerHTML=month[7];
+								
+								var icontab3=[];
+								
+								for(var i=1;i<8;i++)
+								{
+									icontab3[i] = output.daily.data[i].icon;
+									switch(icontab3[i])
+								{
+									case "clear-day":
+        									icontab3[i]='http://cs-server.usc.edu:45678/hw/hw8/images/clear.png';
+        									break;
+    									case "clear-night":
+        									icontab3[i]='http://cs-server.usc.edu:45678/hw/hw8/images/clear_night.png';
+        									break;
+    									case "rain":
+        									icontab3[i]='http://cs-server.usc.edu:45678/hw/hw8/images/rain.png';
+        									break;
+    									case "snow":
+        									icontab3[i]='http://cs-server.usc.edu:45678/hw/hw8/images/snow.png';
+        									break;
+    									case "sleet":
+        									icontab3[i]='http://cs-server.usc.edu:45678/hw/hw8/images/sleet.png';
+        									break;
+    									case "wind":
+        									icontab3[i]='http://cs-server.usc.edu:45678/hw/hw8/images/wind.png';
+        									break;
+    									case "fog":
+        									icontab3[i]='http://cs-server.usc.edu:45678/hw/hw8/images/wind.png';
+        									break;
+    									case "cloudy":
+        									icontab3[i]='http://cs-server.usc.edu:45678/hw/hw8/images/cloudy.png';
+        									break;
+    									case "partly-cloudy-day":
+        									icontab3[i]='http://cs-server.usc.edu:45678/hw/hw8/images/cloud_day.png';
+        									break;
+    									case "partly-cloudy-night":
+        									icontab3[i]='http://cs-server.usc.edu:45678/hw/hw8/images/cloud_night.png';
+        									break; 
+								}
+								
+
+								}
+								document.getElementById("icon1").innerHTML='<center><img src="'+icontab3[1]+'"style="width:70%;height:15%;" title="'+output.daily.data[1].summary+'"></img></center>';
+								document.getElementById("icon2").innerHTML='<center><img src="'+icontab3[2]+'"style="width:70%;height:15%;" title="'+output.daily.data[2].summary+'"></img></center>';
+								document.getElementById("icon3").innerHTML='<center><img src="'+icontab3[3]+'"style="width:70%;height:15%;" title="'+output.daily.data[3].summary+'"></img></center>';
+								document.getElementById("icon4").innerHTML='<center><img src="'+icontab3[4]+'"style="width:70%;height:15%;" title="'+output.daily.data[4].summary+'"></img></center>';
+								document.getElementById("icon5").innerHTML='<center><img src="'+icontab3[5]+'"style="width:70%;height:15%;" title="'+output.daily.data[5].summary+'"></img></center>';
+								document.getElementById("icon6").innerHTML='<center><img src="'+icontab3[6]+'"style="width:70%;height:15%;" title="'+output.daily.data[6].summary+'"></img></center>';
+								document.getElementById("icon7").innerHTML='<center><img src="'+icontab3[7]+'"style="width:70%;height:15%;" title="'+output.daily.data[7].summary+'"></img></center>';	
+
+
+								var mintemp=[];
+
+								for(var i=1;i<8;i++)
+								{
+									
+									mintemp[i]=Math.round(output.daily.data[i].temperatureMin);
+									
+								}
+								document.getElementById("mintemp1").innerHTML="<center>"+mintemp[1]+"<sup>&deg;</sup></center>";
+								document.getElementById("mintemp2").innerHTML="<center>"+mintemp[2]+"<sup>&deg;</sup></center>";
+								document.getElementById("mintemp3").innerHTML="<center>"+mintemp[3]+"<sup>&deg;</sup></center>";
+								document.getElementById("mintemp4").innerHTML="<center>"+mintemp[4]+"<sup>&deg;</sup></center>";
+								document.getElementById("mintemp5").innerHTML="<center>"+mintemp[5]+"<sup>&deg;</sup></center>";
+								document.getElementById("mintemp6").innerHTML="<center>"+mintemp[6]+"<sup>&deg;</sup></center>";
+								document.getElementById("mintemp7").innerHTML="<center>"+mintemp[7]+"<sup>&deg;</sup></center>";
+
+								var maxtemp=[];
+
+								for(var i=1;i<8;i++)
+								{
+									
+									maxtemp[i]=Math.round(output.daily.data[i].temperatureMax);
+									
+								}
+
+								document.getElementById("maxtemp1").innerHTML="<center>"+maxtemp[1]+"<sup>&deg;</sup></center>";
+								document.getElementById("maxtemp2").innerHTML="<center>"+maxtemp[2]+"<sup>&deg;</sup></center>";
+								document.getElementById("maxtemp3").innerHTML="<center>"+maxtemp[3]+"<sup>&deg;</sup></center>";
+								document.getElementById("maxtemp4").innerHTML="<center>"+maxtemp[4]+"<sup>&deg;</sup></center>";
+								document.getElementById("maxtemp5").innerHTML="<center>"+maxtemp[5]+"<sup>&deg;</sup></center>";
+								document.getElementById("maxtemp6").innerHTML="<center>"+maxtemp[6]+"<sup>&deg;</sup></center>";
+								document.getElementById("maxtemp7").innerHTML="<center>"+maxtemp[7]+"<sup>&deg;</sup></center>";
+
+
+								//for modal
+								var title1="Weather in "+city1+" on "+month[1];
+								var title2="Weather in "+city1+" on "+month[2];
+								var title3="Weather in "+city1+" on "+month[3];
+								var title4="Weather in "+city1+" on "+month[4];
+								var title5="Weather in "+city1+" on "+month[5];
+								var title6="Weather in "+city1+" on "+month[6];
+								var title7="Weather in "+city1+" on "+month[7];
+								
+								document.getElementById("title1").innerHTML=title1;
+								document.getElementById("image1").innerHTML='<center><img src="'+icontab3[1]+'"style="width:80px;height:80px;" title="'+output.daily.data[1].summary+'"></img></center>';
+								document.getElementById("day1").innerHTML=day[1]+":";
+								document.getElementById("info1").innerHTML=output.daily.data[1].summary;
+
+								document.getElementById("title2").innerHTML=title2;
+								document.getElementById("image2").innerHTML='<center><img src="'+icontab3[2]+'"style="width:80px;height:80px;" title="'+output.daily.data[2].summary+'"></img></center>';
+								document.getElementById("day2").innerHTML=day[2]+":";
+								document.getElementById("info2").innerHTML=output.daily.data[2].summary;
+
+								document.getElementById("title3").innerHTML=title3;
+								document.getElementById("image3").innerHTML='<center><img src="'+icontab3[3]+'"style="width:80px;height:80px;" title="'+output.daily.data[3].summary+'"></img></center>';
+								document.getElementById("day3").innerHTML=day[3]+":";
+								document.getElementById("info3").innerHTML=output.daily.data[3].summary;
+								
+								document.getElementById("title4").innerHTML=title4;
+								document.getElementById("image4").innerHTML='<center><img src="'+icontab3[4]+'"style="width:80px;height:80px;" title="'+output.daily.data[4].summary+'"></img></center>';
+								document.getElementById("day4").innerHTML=day[4]+":";
+								document.getElementById("info4").innerHTML=output.daily.data[4].summary;
+
+								document.getElementById("title5").innerHTML=title5;
+								document.getElementById("image5").innerHTML='<center><img src="'+icontab3[5]+'"style="width:80px;height:80px;" title="'+output.daily.data[5].summary+'"></img></center>';
+								document.getElementById("day5").innerHTML=day[5]+":";
+								document.getElementById("info5").innerHTML=output.daily.data[5].summary;
+
+								document.getElementById("title6").innerHTML=title6;
+								document.getElementById("image6").innerHTML='<center><img src="'+icontab3[6]+'"style="width:80px;height:80px;" title="'+output.daily.data[6].summary+'"></img></center>';
+								document.getElementById("day6").innerHTML=day[6]+":";
+								document.getElementById("info6").innerHTML=output.daily.data[6].summary;
+
+								document.getElementById("title7").innerHTML=title7;
+								document.getElementById("image7").innerHTML='<center><img src="'+icontab3[7]+'"style="width:80px;height:80px;" title="'+output.daily.data[7].summary+'"></img></center>';
+								document.getElementById("day7").innerHTML=day[7]+":";
+								document.getElementById("info7").innerHTML=output.daily.data[7].summary;
+								
+								var sunr=[];
+								for(var i=1;i<8;i++)
+								{
+									sunr[i] = moment((output.daily.data[i].sunriseTime)*1000).tz(timezone).format('hh:mm A');
+									
+								}
+								document.getElementById("sr1").innerHTML=sunr[1];
+								document.getElementById("sr2").innerHTML=sunr[2];
+								document.getElementById("sr3").innerHTML=sunr[3];
+								document.getElementById("sr4").innerHTML=sunr[4];
+								document.getElementById("sr5").innerHTML=sunr[5];
+								document.getElementById("sr6").innerHTML=sunr[6];
+								document.getElementById("sr7").innerHTML=sunr[7];
+
+								var suns=[];
+								for(var i=1;i<8;i++)
+								{
+									suns[i] = moment((output.daily.data[i].sunsetTime)*1000).tz(timezone).format('hh:mm A');
+								}	
+								document.getElementById("ss1").innerHTML=suns[1];
+								document.getElementById("ss2").innerHTML=suns[2];
+								document.getElementById("ss3").innerHTML=suns[3];
+								document.getElementById("ss4").innerHTML=suns[4];
+								document.getElementById("ss5").innerHTML=suns[5];
+								document.getElementById("ss6").innerHTML=suns[6];
+								document.getElementById("ss7").innerHTML=suns[7];
+
+								var humd=[];
+								for(var i=1;i<8;i++)
+								{
+									var hd = (output.daily.data[i].humidity).toFixed(2);
+									humd[i]= Math.round(hd*100)+"%";
+								}
+								
+								document.getElementById("h1").innerHTML=humd[1];
+								document.getElementById("h2").innerHTML=humd[2];
+								document.getElementById("h3").innerHTML=humd[3];
+								document.getElementById("h4").innerHTML=humd[4];
+								document.getElementById("h5").innerHTML=humd[5];
+								document.getElementById("h6").innerHTML=humd[6];
+								document.getElementById("h7").innerHTML=humd[7];
+
+								var winds=[];
+								for(var i=1;i<8;i++)
+								{
+									if(degree1 == "fahrenheit")
+									winds[i]=output.daily.data[i].windSpeed+" mph";
+									else
+									winds[i]=output.daily.data[i].windSpeed+" m/s";
+								}
+								document.getElementById("w1").innerHTML=winds[1];
+								document.getElementById("w2").innerHTML=winds[2];
+								document.getElementById("w3").innerHTML=winds[3];
+								document.getElementById("w4").innerHTML=winds[4];
+								document.getElementById("w5").innerHTML=winds[5];
+								document.getElementById("w6").innerHTML=winds[6];
+								document.getElementById("w7").innerHTML=winds[7];
+
+								var visib=[];
+								for(var i=1;i<8;i++)
+								{
+									if(output.daily.data[i].visibility == undefined)
+									{visib[i]="N/A";
+									}
+									else
+									{
+									if(degree1 == "fahrenheit")
+									visib[i]=output.daily.data[i].visibility+" mi";
+									else
+									visib[i]=output.daily.data[i].visibility+" km";
+									}
+									
+								}
+								document.getElementById("v1").innerHTML=visib[1];
+								document.getElementById("v2").innerHTML=visib[2];
+								document.getElementById("v3").innerHTML=visib[3];
+								document.getElementById("v4").innerHTML=visib[4];
+								document.getElementById("v5").innerHTML=visib[5];
+								document.getElementById("v6").innerHTML=visib[6];
+								document.getElementById("v7").innerHTML=visib[7];
+
+								
+								var press=[];
+								for(var i=1;i<8;i++)
+								{
+									if(degree1 == "fahrenheit")
+									press[i]=output.daily.data[i].pressure+" mb";
+									else
+									press[i]=output.daily.data[i].pressure+" hPa";
+								}
+								document.getElementById("p1").innerHTML=press[1];
+								document.getElementById("p2").innerHTML=press[2];
+								document.getElementById("p3").innerHTML=press[3];
+								document.getElementById("p4").innerHTML=press[4];
+								document.getElementById("p5").innerHTML=press[5];
+								document.getElementById("p6").innerHTML=press[6];
+								document.getElementById("p7").innerHTML=press[7];
+
+								 
+							 	//map logic
+								document.getElementById("basicMap").innerHTML="";
+								var lonlat = new OpenLayers.LonLat(longitude,latitude);
+								
+    								var map = new OpenLayers.Map("basicMap");
+    								// Create OSM overlays
+    								var mapnik = new OpenLayers.Layer.OSM();
+								
+								 var layer_cloud = new OpenLayers.Layer.XYZ(
+        													"clouds",
+        													"http://${s}.tile.openweathermap.org/map/clouds/${z}/${x}/${y}.png",
+        													{
+            														isBaseLayer: false,
+            														opacity: 0.9,
+            														sphericalMercator: true
+        													}
+    													);
+
+    								var layer_precipitation = new OpenLayers.Layer.XYZ(
+        													"precipitation",
+        													"http://${s}.tile.openweathermap.org/map/precipitation/${z}/${x}/${y}.png",
+        													{
+            														isBaseLayer: false,
+            														opacity: 0.9,
+            														sphericalMercator: true
+        													}
+    													);
+
+								
+    								map.addLayers([mapnik, layer_precipitation, layer_cloud]);
+
+								// Add Layer switcher
+								map.addControl(new OpenLayers.Control.LayerSwitcher()); 
+
+								map.setCenter(lonlat,10);
+								
+				
+							}
+							else
+							{
+								$('#display').hide();
+							}
+						},
+						error: function(e){
+							alert("error");
+							
+						}
+					});
+
+			}
+		
+
+			
+		});
+	
+});
+</script>
+</head>
+<body>
+<center>
+<h2>Forecast Search</h2>
+<div class="container" style="background-color:rgba(0,0,0,0.2);width:90%;margin-top:10px;">
+
+<form id="myform" method="get" class="form-inline" role="form">
+
+<div class="form-group">
+	<label for="street" style="color:white;float:left;">Street Address:<span style="color:red;">*</span></label></br>
+	<input type="text" name="street" id="street" class="form-control" style="float:left;" size="30" placeholder="Enter street address">
+	</br><span id="error1"style="float:left;"></span>
+</div>
+
+<div class="form-group">
+	<label for="city" style="color:white;float:left;">City:<span style="color:red;">*</span></label></br>
+	<input type="text" name="city" id="city" class="form-control" style="float:left;" size="22" placeholder="Enter the city name">
+	</br><span id="error2" style="float:left;"></span>
+</div>
+
+
+<div class="form-group">
+	<label for="state" style="color:white;float:left;">State:<span style="color:red;">*</span></label></br>
+	<select name="state" id="state" class="form-control">
+	<option value="">Select your state...</option>
+	<option value="Alabama">Alabama</option>
+	<option value="Alaska">Alaska</option>
+	<option value="Arizona">Arizona</option>
+	<option value="Arkansas">Arkansas</option>
+	<option value="California">California</option>
+	<option value="Colorado">Colorado</option>
+	<option value="Connecticut">Connecticut</option>
+	<option value="Delaware" >Delaware</option>
+	<option value="District Of Columbia">District Of Columbia</option>
+	<option value="Florida">Florida</option>
+	<option value="Georgia">Georgia</option>
+	<option value="Hawaii">Hawaii</option>
+	<option value="Idaho">Idaho</option>
+	<option value="Illinois">Illinois</option>
+	<option value="Indiana">Indiana</option>
+	<option value="Iowa">Iowa</option>
+	<option value="Kansas">Kansas</option>
+	<option value="Kentucky">Kentucky</option>
+	<option value="Louisiana">Louisiana</option>
+	<option value="Maine">Maine</option>
+	<option value="Maryland">Maryland</option>
+	<option value="Massachusetts">Massachusetts</option>
+	<option value="Michigan">Michigan</option>
+	<option value="Minnesota">Minnesota</option>
+	<option value="Mississippi">Mississippi</option>
+	<option value="Missouri">Missouri</option>
+	<option value="Montana">Montana</option>
+	<option value="Nebraska">Nebraska</option>
+	<option value="Nevada">Nevada</option>
+	<option value="New Hampshire">New Hampshire</option>
+	<option value="New Jersey">New Jersey</option>
+	<option value="New Mexico">New Mexico</option>
+	<option value="New York">New York</option>
+	<option value="North Carolina">North Carolina</option>
+	<option value="North Dakota">North Dakota</option>
+	<option value="Ohio">Ohio</option>
+	<option value="Oklahoma">Oklahoma</option>
+	<option value="Oregon">Oregon</option>
+	<option value="Pennsylvania">Pennsylvania</option>
+	<option value="Rhode Island">Rhode Island</option>
+	<option value="South Carolina">South Carolina</option>
+	<option value="South Dakota">South Dakota</option>
+	<option value="Tennessee">Tennessee</option>
+	<option value="Texas">Texas</option>
+	<option value="Utah">Utah</option>
+	<option value="Vermont">Vermont</option>
+	<option value="Virginia">Virginia</option>
+	<option value="Washington">Washington</option>
+	<option value="West Virgina">West Virgina</option>
+	<option value="Wisconsin">Wisconsin</option>
+	<option value="Wyoming">Wyoming</option>
+	</select>
+	</br><span id="error3" style="float:left;"></span>
+</div>
+
+
+<div class="form-group">
+	<label for="degree" style="color:white;float:left;">Degree:<span style="color:red;">*</span></label></br></br>
+	<span>&nbsp;</span>
+	<label class="radio-inline" style="color:white;float:left;">
+		<input type="radio" id="d1" name="degree" value="fahrenheit" checked="checked">fahrenheit
+	</label>
+	<label class="radio-inline" style="color:white;float:left;">
+		<input type="radio" id="d2" name="degree" value="celsius">celsius
+	</label>
+</div>
+
+
+<div class="form-group">
+	</br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button type="submit" id="submit" class="btn btn-primary btn-sm active"><span class="glyphicon glyphicon-search"></span> Search </button>&nbsp;<button type="button" id="clear" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-refresh"></span>Clear</button>
+</div>
+
+<div>
+	<label style="float:right;"><span style="color:white">Powered by:</span><a href="http://forecast.io/"><img width="70px"height="50px"src="http://cs-server.usc.edu:45678/hw/hw8/images/forecast_logo.png"></img></a></label>
+</div>
+
+</form>
+</div>
+
+
+<hr width="90%">
+
+<div class="container" style="width:90%" id="display">
+	<ul class="nav nav-pills">
+    		<li class="active" style="background-color:white;"><a data-toggle="pill" href="#tab1">Right Now</a></li>
+    		<li style="background-color:white;"><a data-toggle="pill" href="#tab2">Next 24 Hours</a></li>
+    		<li style="background-color:white;"><a data-toggle="pill" href="#tab3">Next 7 Days</a></li>
+	</ul>
+
+
+	<div class="tab-content">
+    		<div id="tab1" class="tab-pane fade in active">
+			<div class="row" style="width:100%;">
+      			<div class="col-sm-6" style="padding:1px;display:table;height:78%;">
+				<table class="table"style="float:left;height:78%;">
+    					<thead style="background-color:#FF8282;width:100%;">
+      						<tr>
+        					<th id="icon"></th>
+        					<th id="summary" style="text-align:center;"></th>
+      						</tr>
+    					</thead>
+   	 				<tbody style="align:center;width:100%;">
+      						<tr style="background-color:white;">
+        					<td style="color:black;">Precipitation:</td>
+        					<td id="precipitation"style="text-align:center;text-indent:10px;"></td>
+      						</tr>
+      						<tr class="danger">
+        					<td style="color:black;">Chance of Rain:</td>
+        					<td id="precipitationprob"style="text-align:center;text-indent:10px;"></td>
+      						</tr>
+      						<tr style="background-color:white;">
+        					<td style="color:black;">Wind Speed:</td>
+        					<td id="wind"style="text-align:center;text-indent:10px;"></td>
+      						</tr>
+						<tr class="danger">
+        					<td style="color:black;">Dew Point:</td>
+        					<td id="dew"style="text-align:center;text-indent:10px;"></td>
+      						</tr>
+						<tr style="background-color:white;">
+        					<td style="color:black;">Humidity:</td>
+        					<td id="humidity"style="text-align:center;text-indent:10px;"></td>
+      						</tr>
+						<tr class="danger">
+        					<td style="color:black;">Visibility:</td>
+        					<td id="visibility"style="text-align:center;text-indent:10px;"></td>
+      						</tr>
+						<tr style="background-color:white;">
+        					<td style="color:black;">Sunrise:</td>
+        					<td id="sunrise"style="text-align:center;text-indent:10px;"></td>
+      						</tr>
+						<tr class="danger">
+        					<td style="color:black;">Sunset:</td>
+        					<td id="sunset"style="text-align:center;text-indent:10px;"></td>
+      						</tr>
+    					</tbody>
+  				</table>
+			
+			</div>
+			<div class="col-sm-6" style="height:78%;" id="basicMap">
+				
+			</div>
+			</div>
+    		</div>
+    		<div id="tab2" class="tab-pane fade">
+				<div style="width:100%;float:left;">
+      				<table class="table">
+    					<thead style="background-color:rgb(51,122,183);color:white;">
+      						<tr>
+        					<th>Time</th>
+        					<th>Summary</th>
+        					<th>Cloud Cover</th> 
+        					<th id="tempsymbol"></th>
+        					<th>View Details</th>
+      						</tr>
+    					</thead>
+    					<tbody>
+      						<tr style="background-color:white;color:black;">
+       	 					<td id="time1"></td>
+        					<td id="summary1"></td>
+        					<td id="cloud1"></td>
+						<td id="temp1"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo1"></span></td>
+						</tr>
+
+						
+						<tr style="background-color:rgb(242,242,242);width:100%;"id="demo1" class="collapse">
+						<td colspan="5" style="width:100%">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="10%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc1" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc1" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc1" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc1" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+					
+
+
+						
+						
+							
+
+      						<tr style="background-color:white;color:black;">
+        					<td id="time2"></td>
+        					<td id="summary2"></td>
+        					<td id="cloud2"></td>
+						<td id="temp2"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo2"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo2" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc2" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc2" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc2" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc2" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+
+
+
+      						<tr style="background-color:white;color:black;">
+        					<td id="time3"></td>
+        					<td id="summary3"></td>
+        					<td id="cloud3"></td>
+						<td id="temp3"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo3"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo3" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc3" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc3" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc3" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc3" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+						
+
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time4"></td>
+        					<td id="summary4"></td>
+        					<td id="cloud4"></td>
+						<td id="temp4"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo4"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo4" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc4" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc4" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc4" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc4" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time5"></td>
+        					<td id="summary5"></td>
+        					<td id="cloud5"></td>
+						<td id="temp5"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo5"></span></td>
+      						</tr>
+						<tr style="background-color:rgb(242,242,242);"id="demo5" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc5" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc5" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc5" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc5" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time6"></td>
+        					<td id="summary6"></td>
+        					<td id="cloud6"></td>
+						<td id="temp6"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo6"></span></td>
+      						</tr>
+						
+						<tr style="background-color:rgb(242,242,242);"id="demo6" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc6" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc6" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc6" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc6" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time7"></td>
+        					<td id="summary7"></td>
+        					<td id="cloud7"></td>
+						<td id="temp7"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo7"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo7" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc7" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc7" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc7" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc7" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+						<tr style="background-color:white;color:black;">
+						<td id="time8"></td>
+        					<td id="summary8"></td>
+        					<td id="cloud8"></td>
+						<td id="temp8"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo8"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo8" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc8" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc8" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc8" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc8" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time9"></td>
+        					<td id="summary9"></td>
+        					<td id="cloud9"></td>
+						<td id="temp9"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo9"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo9" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc9" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc9" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc9" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc9" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time10"></td>
+        					<td id="summary10"></td>
+        					<td id="cloud10"></td>
+						<td id="temp10"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo10"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo10" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc10" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc10" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc10" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc10" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+							
+
+
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time11"></td>
+        					<td id="summary11"></td>
+        					<td id="cloud11"></td>
+						<td id="temp11"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo11"></span></td>
+      						</tr>
+
+
+						<tr style="background-color:rgb(242,242,242);"id="demo11" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc11" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc11" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc11" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc11" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+						<tr style="background-color:white;color:black;">
+        					<td id="time12"></td>
+        					<td id="summary12"></td>
+        					<td id="cloud12"></td>
+						<td id="temp12"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo12"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo12" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc12" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc12" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc12" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc12" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+						<tr style="background-color:white;color:black;">
+       	 					<td id="time13"></td>
+        					<td id="summary13"></td>
+        					<td id="cloud13"></td>
+						<td id="temp13"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo13"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo13" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc13" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc13" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc13" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc13" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+      						<tr style="background-color:white;color:black;">
+        					<td id="time14"></td>
+        					<td id="summary14"></td>
+        					<td id="cloud14"></td>
+						<td id="temp14"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo14"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo14" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc14" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc14" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc14" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc14" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+		
+
+      						<tr style="background-color:white;color:black;">
+        					<td id="time15"></td>
+        					<td id="summary15"></td>
+        					<td id="cloud15"></td>
+						<td id="temp15"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo15"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo15" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc15" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc15" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc15" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc15" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>						
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time16"></td>
+        					<td id="summary16"></td>
+        					<td id="cloud16"></td>
+						<td id="temp16"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo16"></span></td>
+      						</tr>
+						
+						<tr style="background-color:rgb(242,242,242);"id="demo16" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc16" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc16" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc16" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc16" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time17"></td>
+        					<td id="summary17"></td>
+        					<td id="cloud17"></td>
+						<td id="temp17"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo17"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo17" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc17" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc17" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc17" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc17" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time18"></td>
+        					<td id="summary18"></td>
+        					<td id="cloud18"></td>
+						<td id="temp18"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo18"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo18" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc18" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc18" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc18" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc18" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+						<tr style="background-color:white;color:black;">
+        					<td id="time19"></td>
+        					<td id="summary19"></td>
+        					<td id="cloud19"></td>
+						<td id="temp19"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo19"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo19" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc19" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc19" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc19" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc19" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+						<tr style="background-color:white;color:black;">
+        					<td id="time20"></td>
+        					<td id="summary20"></td>
+        					<td id="cloud20"></td>
+						<td id="temp20"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo20"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo20" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc20" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc20" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc20" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc20" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time21"></td>
+        					<td id="summary21"></td>
+        					<td id="cloud21"></td>
+						<td id="temp21"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo21"></span></td>
+      						</tr>
+						<tr style="background-color:rgb(242,242,242);"id="demo21" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc21" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc21" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc21" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc21" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time22"></td>
+        					<td id="summary22"></td>
+        					<td id="cloud22"></td>
+						<td id="temp22"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo22"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo22" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc22" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc22" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc22" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc22" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+						<tr style="background-color:white;color:black;">
+        					<td id="time23"></td>
+        					<td id="summary23"></td>
+        					<td id="cloud23"></td>
+						<td id="temp23"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo23"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo23" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc23" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc23" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc23" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc23" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+
+						<tr style="background-color:white;color:black;">
+        					<td id="time24"></td>
+        					<td id="summary24"></td>
+        					<td id="cloud24"></td>
+						<td id="temp24"></td>
+        					<td id=""><span class="glyphicon glyphicon-plus" style="color:rgb(51,122,183);" data-toggle="collapse" data-target="#demo24"></span></td>
+      						</tr>
+
+						<tr style="background-color:rgb(242,242,242);"id="demo24" class="collapse">
+						<td colspan="5">
+							<table>
+							<tr style="background-color:white;height:35px;">
+								<td width="15%">
+									
+								</td>
+								<td width="23%">
+        								
+            									<p style="font-weight:bold;">Wind</p>
+            			
+        								
+    								</td>
+								<td width="27%">
+									
+            									<p style="font-weight:bold;">Humidity</p>
+            									
+        								
+								</td>
+								<td width="28%">
+									
+            									<p style="font-weight:bold;">Visibility</p>
+            									
+        								
+								</td>
+								<td width="50%">
+									
+            									<p style="font-weight:bold;">Pressure</p>
+            									
+        								
+								</td>
+								
+	
+							</tr>
+							<tr style="background-color:rgb(242,242,242);">
+								<td width="15%">
+									
+								</td>
+    								<td width="23%">
+        								
+            									
+            									</br><span id="wc24" style="font-size:15px;"></span>
+        								
+    								</td>
+								<td width="27%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span>&nbsp;&nbsp;</span><span id="hc24" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="28%">
+									
+            									
+            									</br><span>&nbsp;&nbsp;</span><span id="vc24" style="font-size:15px;"></span>
+        								
+								</td>
+								<td width="50%">
+									
+            									
+            									</br><span id="pc24" style="font-size:15px;"></span>
+        								
+								</td>
+								
+							</tr>
+							</table>
+						</td>
+						</tr>
+					
+    					</tbody>
+  				</table>
+				</div>
+    		</div>
+    		<div id="tab3" class="tab-pane fade">
+      			<div style="position:relative;" id="tb3">
+						
+						       		<div class="row" style="position:relative;margin: auto;">
+ 								<div style="width:100%;">
+ 								
+									<div class="col-sm-1" style="margin:2%;">
+									<span></span>
+    									</div>
+									
+
+  									<div class="col-sm-1" id="rod1"style="background-color:rgb(45,120,174);color:white;margin: 1%;" data-toggle="modal" data-target="#myModal1">
+  									
+									<span id="day11" style="font-weight:bold;font-size:13px;"></span></br>
+									<span id="month1"style="font-weight:bold;"></span></br>
+									<span id="icon1"></span></br>
+									<span id=""style="font-weight:bold;"><center>Min</center></span>
+									<span id=""style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="mintemp1" style="font-size:40px;font-weight:bold;"></span></br>
+									<span id=""style="font-weight:bold;"><center>Max</center></span>
+									<span id=""style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="maxtemp1" style="font-size:40px;font-weight:bold;"></span>
+									</div>
+  									
+
+									<div class="modal fade" id="myModal1" role="dialog">
+    									<div class="modal-dialog">
+    
+      										<!-- Modal content-->
+      										<div class="modal-content">
+        									<div class="modal-header" style="height:50px;">
+         	 									<button type="button" class="close" data-dismiss="modal">&times;</button>
+          										<h4 class="modal-title"id="title1" style="float:left;"></h4>
+        									</div>
+        									<div class="modal-body">
+          										<p id="image1"></p>		
+											
+											<span style="font-size:25px;font-weight:bold;"id="day1">:</span>&nbsp;<span style="font-size:25px;color:yellow;" id="info1"></span></br>
+											<div class="row">
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunrise Time</p><p style="font-size:15px;"id="sr1"></p><p style="font-size:20px;font-weight:bold;">Wind Speed</p><p style="font-size:15px;"id="w1"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunset Time</p><p style="font-size:15px;"id="ss1"></p><p style="font-size:20px;font-weight:bold;">Visibility</p><p style="font-size:15px;"id="v1"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Humidity &nbsp;</p><p style="font-size:15px;"id="h1"></p><p style="font-size:20px;font-weight:bold;">Pressure</p><p style="font-size:15px;"id="p1"></p></div>
+  											</div>
+												
+        									</div>
+        									<div class="modal-footer">
+          										<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        									</div>
+      										</div>				
+									</div>
+									</div>
+
+									
+									<div class="col-sm-1"id="rod2" style="background-color:rgb(228,68,64);color:white;margin: 1%;" data-toggle="modal" data-target="#myModal2">
+  									<span id="day22"style="font-weight:bold;font-size:13px;"></span></br>
+									<span id="month2"style="font-weight:bold;"></span></br>
+									<span id="icon2"></span></br>
+									<span id=""style="font-weight:bold;"><center>Min</center></span>
+									<span id=""style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="mintemp2" style="font-size:40px;font-weight:bold;"></span></br>
+									<span id=""style="font-weight:bold;"><center>Max</center></span>
+									<span id=""style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="maxtemp2" style="font-size:40px;font-weight:bold;"></span>
+									</div>
+  									
+
+									
+									<div class="modal fade" id="myModal2" role="dialog">
+    									<div class="modal-dialog">
+    
+      										<!-- Modal content-->
+      										<div class="modal-content">
+        									<div class="modal-header" style="height:50px;">
+         	 									<button type="button" class="close" data-dismiss="modal">&times;</button>
+          										<h4 class="modal-title"id="title2" style="float:left;"></h4>
+        									</div>
+        									<div class="modal-body">
+          										<p id="image2"></p>		
+											
+											<span style="font-size:25px;font-weight:bold;"id="day2">:</span>&nbsp;<span style="font-size:25px;color:yellow;" id="info2"></span></br>
+											<div class="row">
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunrise Time</p><p style="font-size:15px;"id="sr2"></p><p style="font-size:20px;font-weight:bold;">Wind Speed</p><p style="font-size:15px;"id="w2"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunset Time</p><p style="font-size:15px;"id="ss2"></p><p style="font-size:20px;font-weight:bold;">Visibility</p><p style="font-size:15px;"id="v2"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Humidity &nbsp;</p><p style="font-size:15px;"id="h2"></p><p style="font-size:20px;font-weight:bold;">Pressure</p><p style="font-size:15px;"id="p2"></p></div>
+  											</div>
+												
+        									</div>
+        									<div class="modal-footer">
+          										<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        									</div>
+      										</div>				
+									</div>
+									</div>
+
+
+									<div class="col-sm-1"id="rod3" style="background-color:rgb(225,141,75);color:white;margin: 1%;" data-toggle="modal" data-target="#myModal3">
+  									
+									<span id="day33"style="font-weight:bold;font-size:13px;"></span></br>
+									<span id="month3"style="font-weight:bold;"></span></br>
+									<span id="icon3"></span></br>
+									<span id=""style="font-weight:bold;"><center>Min</center></span>
+									<span id=""style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="mintemp3" style="font-size:40px;font-weight:bold;"></span></br>
+									<span id=""style="font-weight:bold;"><center>Max</center></span>
+									<span id=""style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="maxtemp3" style="font-size:40px;font-weight:bold;"></span>
+									</div>
+  									
+
+									<div class="modal fade" id="myModal3" role="dialog">
+    									<div class="modal-dialog">
+    
+      										<!-- Modal content-->
+      										<div class="modal-content">
+        									<div class="modal-header" style="height:50px;">
+         	 									<button type="button" class="close" data-dismiss="modal">&times;</button>
+          										<h4 class="modal-title"id="title3" style="float:left;"></h4>
+        									</div>
+        									<div class="modal-body">
+          										<p id="image3"></p>		
+											
+											<span style="font-size:25px;font-weight:bold;"id="day3">:</span>&nbsp;<span style="font-size:25px;color:yellow;" id="info3"></span></br>
+											<div class="row">
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunrise Time</p><p style="font-size:15px;"id="sr3"></p><p style="font-size:20px;font-weight:bold;">Wind Speed</p><p style="font-size:15px;"id="w3"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunset Time</p><p style="font-size:15px;"id="ss3"></p><p style="font-size:20px;font-weight:bold;">Visibility</p><p style="font-size:15px;"id="v3"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Humidity &nbsp;</p><p style="font-size:15px;"id="h3"></p><p style="font-size:20px;font-weight:bold;">Pressure</p><p style="font-size:15px;"id="p3"></p></div>
+  											</div>
+												
+        									</div>
+        									<div class="modal-footer">
+          										<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        									</div>
+      										</div>				
+									</div>
+									</div>
+
+
+
+
+
+
+									
+
+
+									<div class="col-sm-1"id="rod4" style="background-color:rgb(165,164,57);color:white;margin: 1%;" data-toggle="modal" data-target="#myModal4">
+									<span id="day44"style="font-weight:bold;font-size:13px;"></span></br>
+									<span id="month4"style="font-weight:bold;"></span></br>
+									<span id="icon4"></span></br>
+									<span id=""style="font-weight:bold;"><center>Min</center></span>
+									<span id=""style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="mintemp4" style="font-size:40px;font-weight:bold;"></span></br>
+									<span id=""style="font-weight:bold;"><center>Max</center></span>
+									<span id=""style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="maxtemp4" style="font-size:40px;font-weight:bold;"></span>
+									</div>
+  									
+									
+									<div class="modal fade" id="myModal4" role="dialog">
+    									<div class="modal-dialog">
+    
+      										<!-- Modal content-->
+      										<div class="modal-content">
+        									<div class="modal-header" style="height:50px;">
+         	 									<button type="button" class="close" data-dismiss="modal">&times;</button>
+          										<h4 class="modal-title"id="title4" style="float:left;"></h4>
+        									</div>
+        									<div class="modal-body">
+          										<p id="image4"></p>		
+											
+											<span style="font-size:25px;font-weight:bold;"id="day4">:</span>&nbsp;<span style="font-size:25px;color:yellow;" id="info4"></span></br>
+											<div class="row">
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunrise Time</p><p style="font-size:15px;"id="sr4"></p><p style="font-size:20px;font-weight:bold;">Wind Speed</p><p style="font-size:15px;"id="w4"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunset Time</p><p style="font-size:15px;"id="ss4"></p><p style="font-size:20px;font-weight:bold;">Visibility</p><p style="font-size:15px;"id="v4"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Humidity &nbsp;</p><p style="font-size:15px;"id="h4"></p><p style="font-size:20px;font-weight:bold;">Pressure</p><p style="font-size:15px;"id="p4"></p></div>
+  											</div>
+												
+        									</div>
+        									<div class="modal-footer">
+          										<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        									</div>
+      										</div>				
+									</div>
+									</div>
+
+
+
+
+
+									
+
+									<div class="col-sm-1"id="rod5" style="background-color:rgb(147,107,162);color:white;margin: 1%;" data-toggle="modal" data-target="#myModal5">
+  									<span id="day55" style="font-weight:bold;font-size:13px;"></span></br>
+									<span id="month5" style="font-weight:bold;"></span></br>
+									<span id="icon5"></span></br>
+									<span id="" style="font-weight:bold;"><center>Min</center></span>
+									<span id="" style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="mintemp5" style="font-size:40px;font-weight:bold;"></span></br>
+									<span id="" style="font-weight:bold;"><center>Max</center></span>
+									<span id="" style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="maxtemp5" style="font-size:40px;font-weight:bold;"></span>
+									</div>
+  									
+
+									
+									<div class="modal fade" id="myModal5" role="dialog">
+    									<div class="modal-dialog">
+    
+      										<!-- Modal content-->
+      										<div class="modal-content">
+        									<div class="modal-header" style="height:50px;">
+         	 									<button type="button" class="close" data-dismiss="modal">&times;</button>
+          										<h4 class="modal-title"id="title5" style="float:left;"></h4>
+        									</div>
+        									<div class="modal-body">
+          										<p id="image5"></p>		
+											
+											<span style="font-size:25px;font-weight:bold;"id="day5">:</span>&nbsp;<span style="font-size:25px;color:yellow;" id="info5"></span></br>
+											<div class="row">
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunrise Time</p><p style="font-size:15px;"id="sr5"></p><p style="font-size:20px;font-weight:bold;">Wind Speed</p><p style="font-size:15px;"id="w5"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunset Time</p><p style="font-size:15px;"id="ss5"></p><p style="font-size:20px;font-weight:bold;">Visibility</p><p style="font-size:15px;"id="v5"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Humidity &nbsp;</p><p style="font-size:15px;"id="h5"></p><p style="font-size:20px;font-weight:bold;">Pressure</p><p style="font-size:15px;"id="p5"></p></div>
+  											</div>
+												
+        									</div>
+        									<div class="modal-footer">
+          										<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        									</div>
+      										</div>				
+									</div>
+									</div>
+
+
+
+
+
+									
+									
+									<div class="col-sm-1" id="rod6"style="background-color:rgb(235,121,122);color:white;margin: 1%;" data-toggle="modal" data-target="#myModal6">
+  									
+									<span id="day66" style="font-weight:bold;font-size:13px;"></span></br>
+									<span id="month6" style="font-weight:bold;"></span></br>
+									<span id="icon6"></span></br>
+									<span id="" style="font-weight:bold;"><center>Min</center></span>
+									<span id="" style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="mintemp6" style="font-size:40px;font-weight:bold;"></span></br>
+									<span id="" style="font-weight:bold;"><center>Max</center></span>
+									<span id="" style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="maxtemp6" style="font-size:40px;font-weight:bold;"></span>
+									</div>
+  									
+
+									
+									<div class="modal fade" id="myModal6" role="dialog">
+    									<div class="modal-dialog">
+    
+      										<!-- Modal content-->
+      										<div class="modal-content">
+        									<div class="modal-header" style="height:50px;">
+         	 									<button type="button" class="close" data-dismiss="modal">&times;</button>
+          										<h4 class="modal-title"id="title6" style="float:left;"></h4>
+        									</div>
+        									<div class="modal-body">
+          										<p id="image6"></p>		
+											
+											<span style="font-size:25px;font-weight:bold;"id="day6">:</span>&nbsp;<span style="font-size:25px;color:yellow;" id="info6"></span></br>
+											<div class="row">
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunrise Time</p><p style="font-size:15px;"id="sr6"></p><p style="font-size:20px;font-weight:bold;">Wind Speed</p><p style="font-size:15px;"id="w6"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunset Time</p><p style="font-size:15px;"id="ss6"></p><p style="font-size:20px;font-weight:bold;">Visibility</p><p style="font-size:15px;"id="v6"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Humidity &nbsp;</p><p style="font-size:15px;"id="h6"></p><p style="font-size:20px;font-weight:bold;">Pressure</p><p style="font-size:15px;"id="p6"></p></div>
+  											</div>
+												
+        									</div>
+        									<div class="modal-footer">
+          										<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        									</div>
+      										</div>				
+									</div>
+									</div>
+			
+				
+
+
+
+
+								
+								
+									<div class="col-sm-1" id="rod7"style="background-color:rgb(45,120,174);color:white;margin: 1%;" data-toggle="modal" data-target="#myModal7">
+  									<span id="day77" style="font-weight:bold;font-size:13px;"></span></br>
+									<span id="month7" style="font-weight:bold;"></span></br>
+									<span id="icon7"></span></br>
+									<span id="" style="font-weight:bold;"><center>Min</center></span>
+									<span id="" style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="mintemp7" style="font-size:40px;font-weight:bold;"></span></br>
+									<span id="" style="font-weight:bold;"><center>Max</center></span>
+									<span id="" style="font-weight:bold;"><center>Temp</center></span></br>
+									<span id="maxtemp7" style="font-size:40px;font-weight:bold;"></span>
+									</div>
+  									
+
+
+									<div class="modal fade" id="myModal7" role="dialog">
+    									<div class="modal-dialog">
+    
+      										<!-- Modal content-->
+      										<div class="modal-content">
+        									<div class="modal-header" style="height:50px;">
+         	 									<button type="button" class="close" data-dismiss="modal">&times;</button>
+          										<h4 class="modal-title"id="title7" style="float:left;"></h4>
+        									</div>
+        									<div class="modal-body">
+          										<p id="image7"></p>		
+											
+											<span style="font-size:25px;font-weight:bold;"id="day7">:</span>&nbsp;<span style="font-size:25px;color:yellow;" id="info7"></span></br>
+											<div class="row">
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunrise Time</p><p style="font-size:15px;"id="sr7"></p><p style="font-size:20px;font-weight:bold;">Wind Speed</p><p style="font-size:15px;"id="w7"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Sunset Time</p><p style="font-size:15px;"id="ss7"></p><p style="font-size:20px;font-weight:bold;">Visibility</p><p style="font-size:15px;"id="v7"></p></div>
+    												<div class="col-sm-4" style="background-color:white;"><p style="font-size:20px;font-weight:bold;">Humidity &nbsp;</p><p style="font-size:15px;"id="h7"></p><p style="font-size:20px;font-weight:bold;">Pressure</p><p style="font-size:15px;"id="p7"></p></div>
+  											</div>
+												
+        									</div>
+        									<div class="modal-footer">
+          										<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        									</div>
+      										</div>				
+									</div>
+									</div>
+								</div>
+							</div>
+
+  						
+				
+				
+			</div>
+	
+    		</div>
+  	</div>
+</div>
+
+</center>
+</body>
+</html>
+
+
